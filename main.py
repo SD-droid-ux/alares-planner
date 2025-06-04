@@ -1,6 +1,7 @@
 import streamlit as st
+import pandas as pd
+import os
 
-# Função de autenticação
 def autenticar(login, senha):
     if login == "Projetos01" and senha == "cnx@123":
         return "user"
@@ -9,14 +10,12 @@ def autenticar(login, senha):
     else:
         return None
 
-# Inicializa sessão
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
     st.session_state.perfil = None
+    st.session_state.tela = "login"
 
-# Página de login
-if not st.session_state.autenticado:
-    st.set_page_config(page_title="Login", page_icon="🔐")
+if st.session_state.tela == "login":
     st.title("🔐 Login Alares Planner")
 
     login_input = st.text_input("Login:")
@@ -27,20 +26,53 @@ if not st.session_state.autenticado:
         if perfil:
             st.session_state.autenticado = True
             st.session_state.perfil = perfil
-            st.success(f"✅ Login bem-sucedido! Perfil: {perfil.upper()}")
+            st.session_state.tela = perfil
             st.experimental_rerun()
         else:
             st.error("❌ Login ou senha incorretos.")
 
-# Página após login
-else:
-    st.set_page_config(page_title="Alares Planner", page_icon="📊")
-    st.sidebar.success(f"Perfil: {st.session_state.perfil.upper()}")
+elif st.session_state.tela == "admin":
+    st.title("🛠️ Painel do Administrador")
 
-    # Redirecionamento por perfil
-    if st.session_state.perfil == "admin":
-        st.experimental_set_query_params(page="admin")
+    uploaded_file = st.file_uploader("Faça upload do arquivo Excel (.xlsx ou .xls)", type=["xlsx", "xls"])
+
+    if uploaded_file is not None:
+        try:
+            df = pd.read_excel(uploaded_file)
+            st.success("Arquivo carregado com sucesso!")
+            st.dataframe(df)
+
+            save_path = "data"
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+
+            file_path = os.path.join(save_path, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            st.info(f"Arquivo salvo em: {file_path}")
+
+        except Exception as e:
+            st.error(f"Erro ao processar o arquivo: {e}")
+
+    if st.button("Logout"):
+        st.session_state.autenticado = False
+        st.session_state.perfil = None
+        st.session_state.tela = "login"
         st.experimental_rerun()
-    else:
-        st.experimental_set_query_params(page="user")
+
+elif st.session_state.tela == "user":
+    st.title("📋 Painel do Usuário")
+    st.markdown("Bem-vindo ao sistema Alares Planner!")
+
+    cidade = st.selectbox("Selecione uma cidade:", ["São Paulo", "Curitiba", "Recife"])
+    st.write(f"Cidade selecionada: {cidade}")
+
+    cto = st.text_input("Buscar CTO:")
+    if cto:
+        st.write(f"Buscando dados para CTO: {cto}")
+
+    if st.button("Logout"):
+        st.session_state.autenticado = False
+        st.session_state.perfil = None
+        st.session_state.tela = "login"
         st.experimental_rerun()
